@@ -2,3 +2,4 @@
 *.jar
 .gradle
 !gradle-wrapper.jar
+MANIFEST.MF

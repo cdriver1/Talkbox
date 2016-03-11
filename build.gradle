@@ -1,0 +1,20 @@
+subprojects {
+	apply plugin: "java"
+}
+
+project(":lib") {
+	archivesBaseName = 'TalkBoxLibrary'
+	version = '0.1'
+}
+
+project(":client") {
+	archivesBaseName = 'TalkBoxClient'
+	version = '0.1'
+	dependencies {
+		compile project(":lib")
+	}
+	jar {
+		from project(":lib").sourceSets.main.output.classesDir
+		from project(":lib").sourceSets.main.output.resourcesDir
+	}
+}
