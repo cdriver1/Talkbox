@@ -1,0 +1,4 @@
+apply plugin: 'java'
+
+archivesBaseName = 'TalkBoxLibrary'
+version = '0.1'
