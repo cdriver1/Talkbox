@@ -35,13 +35,31 @@ public class Client implements Serializable {
 
 	/**
 	 * Create a new Client from a Socket and a Date.
-	 * @param   [description]
-	 * @param   [description]
-	 * @return  [description]
+	 * @param   socket The Socket that connects to this Client.
+	 * @param   date The Date when this Client connected.
 	 */
 	public Client(Socket socket, Date date) {
 		this.socket = socket;
 		id = createID(socket, date);
+	}
+	
+	/**
+	 * Create a new Client from an id.
+	 * @param id The unique id of this Client.
+	 */
+	public Client(String id) {
+		this.socket = null;
+		this.id = id;
+	}
+	 
+	/**
+	 * Create a new Client from an id and a Socket.
+	 * @param id The unique id of this Client.
+	 * @param socket The Socket that connects to this Client.
+	 */
+	public Client(String id, Socket socket) {
+		this.id = id;
+		this.socket = socket;
 	}
 
 	/**
