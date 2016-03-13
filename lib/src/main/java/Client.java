@@ -42,7 +42,7 @@ public class Client implements Serializable {
 		this.socket = socket;
 		id = createID(socket, date);
 	}
-	
+
 	/**
 	 * Create a new Client from an id.
 	 * @param id The unique id of this Client.
@@ -51,7 +51,7 @@ public class Client implements Serializable {
 		this.socket = null;
 		this.id = id;
 	}
-	 
+
 	/**
 	 * Create a new Client from an id and a Socket.
 	 * @param id The unique id of this Client.
@@ -111,6 +111,11 @@ public class Client implements Serializable {
 	public static String createMD5ID(Socket socket, Date date) throws NoSuchAlgorithmException {
 		MessageDigest md5 = MessageDigest.getInstance("MD5");
 		md5.update(socket.getInetAddress().getAddress());
+		long t = System.nanoTime();
+		for(int i = 0; i < Long.BYTES; i++) {
+			md5.update((byte)t);
+			t >>= 8;
+		}
 		byte[] digest = md5.digest(date.toString().getBytes());
 		Base64.Encoder encoder = Base64.getEncoder();
 		return encoder.encodeToString(digest);
@@ -127,7 +132,7 @@ public class Client implements Serializable {
 			return createMD5ID(socket, date);
 		} catch(NoSuchAlgorithmException ex) {
 		}
-		return socket.getInetAddress().toString() + date.toString();
+		return socket.getInetAddress().toString() + date.toString() + System.nanoTime();
 	}
 
 	@Override

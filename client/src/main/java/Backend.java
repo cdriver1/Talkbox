@@ -1,15 +1,19 @@
 package talkbox.client;
 
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import talkbox.lib.*;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This is the backend for the client. It is responsible for coordinating between the GUI and networking.
  * For ease of use, the main thread should create a new backend with the static method Backend.Backend().
  */
 public class Backend implements Runnable {
+	//TODO: Get server hostname
+	public static final String hostname = "";
+	public static final int port = 86754;
 	/**
 	 * Create a new Backend, start it, then return it.
 	 * @return A new Backend.
@@ -76,7 +80,7 @@ public class Backend implements Runnable {
 	 */
 	public void receiveMessage(Message m) {
 		receiveQueue.add(m);
-		resume();
+		//resume();
 	}
 
 	/**
@@ -86,7 +90,7 @@ public class Backend implements Runnable {
 	 */
 	public void receiveMessages(Message[] m) {
 		receiveQueue.addAll(Arrays.asList(m));
-		resume();
+		//resume();
 	}
 
 	private synchronized void pause() {
@@ -102,23 +106,34 @@ public class Backend implements Runnable {
 
 	@Override
 	public void run() {
-		//TODO: Tell networking to connect to server.
+		NetworkMethods.openConnection(hostname, port);
 		//TODO: Get unique id from networking.
 		while(running) {
-			pause();
+			//pause();
 			if(!sendQueue.isEmpty()) {
-				Message m;
-				while((m = sendQueue.poll()) != null) {
-					//TODO: Tell networking to send m
+				Message[] messages = (Message[])sendQueue.toArray();
+				for(Message m : messages) {
+					sendQueue.remove(m);
 				}
+				NetworkMethods.sendMessage(messages);
+			} else {
+				NetworkMethods.sendMessage(new Message[0]);
 			}
+			NetworkMethods.receiveMessage();
 			if(!receiveQueue.isEmpty()) {
 				Message m;
 				while((m = receiveQueue.poll()) != null) {
 					//TODO: Tell GUI to display message
 				}
 			}
+			try {
+				Thread.sleep(10);
+			} catch(InterruptedException e) {
+			}
 		}
-		//TODO: Tell networking to disconnect
+		try {
+			NetworkMethods.closeConnection();
+		} catch(IOException e) {
+		}
 	}
 }

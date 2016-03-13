@@ -1,3 +1,6 @@
+package talkbox.client;
+
+import talkbox.lib.*;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -17,16 +20,18 @@ public class NetworkMethods {
     public NetworkMethods(){
     }
 
-    public static void openConnection(InetAddress rcvrAddress, int port){
+    public static void openConnection(String rcvrAddress, int port){ //using a String for the address cuts down on imports in classes that call this
         try {
             sock = new Socket(rcvrAddress, port);
-            objIn = new ObjectInputStream(sock.getInputStream());
             objOut = new ObjectOutputStream(sock.getOutputStream());
+            objIn = new ObjectInputStream(sock.getInputStream()); //construct the input stream after the output stream in case the server constructed the input stream first
         }catch(IOException ex){
             //error handling
         }
     }
     public static void closeConnection() throws IOException{
+		//The server needs to know that the client is disconnecting
+		objOut.writeUTF("disconnect");
         sock.close();
     }
     /*
@@ -34,24 +39,24 @@ public class NetworkMethods {
     * Returns true if the send was successful
     * @param: m will be passed from backend
     * */
-    public static boolean sendMessage(Message m){
-        boolean wasSuccess = false;
+    public static boolean sendMessage(Message[] m){ //use an array parameter to be consistent with receiveMessage
+		boolean wasSuccess = false;
         try {
-            if (m.text != null) {
-                objOut.writeUTF("message");
-                objOut.writeObject(m);
-                wasSuccess = true;
-            } else {
-                objOut.writeUTF("None");
-                wasSuccess = true;
-            }
+			if(m.length > 0) {
+            	objOut.writeUTF("message");
+            	objOut.writeObject(m);
+				wasSuccess = true;
+			} else {
+				objOut.writeUTF("none"); //use none instead of None for consistency
+				wasSuccess = true;
+			}
         }catch(IOException ex){
-            wasSuccess = false;
+        	wasSuccess = false;
         }
-        return wasSuccess;
+		return wasSuccess;
     }
 
-    public static void receiveMessage(Client senderId) {
+    public static void receiveMessage() { //not sure why you had a parameter here, Messages contain the sender
         try {
             String msg = objIn.readUTF();
             switch (msg) {
