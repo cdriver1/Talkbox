@@ -15,7 +15,7 @@ public class NetworkMethods {
     static int myPort;
     static ObjectInputStream objIn;
     static ObjectOutputStream objOut;
-    static Backend backend = new Backend();
+    static Backend backend;
 
     public NetworkMethods(){
     }

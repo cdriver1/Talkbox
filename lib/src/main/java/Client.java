@@ -74,7 +74,7 @@ public class Client implements Serializable {
 	 * @param name The new screenname.
 	 */
 	public void setName(String name) {
-		if(this.name.equals(name))
+		if(this.name != null && this.name.equals(name))
 			return;
 		this.name = name;
 		nameChanged = true;
@@ -110,7 +110,9 @@ public class Client implements Serializable {
 	 */
 	public static String createMD5ID(Socket socket, Date date) throws NoSuchAlgorithmException {
 		MessageDigest md5 = MessageDigest.getInstance("MD5");
-		md5.update(socket.getInetAddress().getAddress());
+		if(socket != null) {
+			md5.update(socket.getInetAddress().getAddress());
+		}
 		long t = System.nanoTime();
 		for(int i = 0; i < Long.BYTES; i++) {
 			md5.update((byte)t);

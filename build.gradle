@@ -14,6 +14,13 @@ project(":client") {
 		compile project(":lib")
 	}
 	jar {
+		manifest {
+			attributes("Implementation-Title": "TalkBox",
+			"Implementation-Version": version,
+			"Permissions": "sandbox",
+			"JavaFX-Version": "8.0",
+			"Main-Class": "talkbox.client.Main")
+		}
 		from project(":lib").sourceSets.main.output.classesDir
 		from project(":lib").sourceSets.main.output.resourcesDir
 	}

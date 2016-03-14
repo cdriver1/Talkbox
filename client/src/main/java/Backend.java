@@ -13,27 +13,52 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Backend implements Runnable {
 	//TODO: Get server hostname
 	public static final String hostname = "";
-	public static final int port = 86754;
+	public static final int port = 5476;
 	/**
 	 * Create a new Backend, start it, then return it.
 	 * @return A new Backend.
 	 */
+	public static Backend Backend(ChatWindowController controller) {
+		Backend b = new Backend(controller);
+		b.start();
+		return b;
+	}
 	public static Backend Backend() {
 		Backend b = new Backend();
 		b.start();
 		return b;
 	}
 
+	private ChatWindowController controller;
 	private final Thread thread;
 	private final AtomicBoolean started;
 	private final ConcurrentLinkedQueue<Message> sendQueue, receiveQueue;
 	private boolean running = true;
+	private Client self;
+	private String setNameAtStart;
 
 	public Backend() {
+		this.controller = null;
 		sendQueue = new ConcurrentLinkedQueue<>();
 		receiveQueue = new ConcurrentLinkedQueue<>();
 		started = new AtomicBoolean();
 		thread = new Thread(this);
+	}
+
+	public Backend(ChatWindowController controller) {
+		this.controller = controller;
+		sendQueue = new ConcurrentLinkedQueue<>();
+		receiveQueue = new ConcurrentLinkedQueue<>();
+		started = new AtomicBoolean();
+		thread = new Thread(this);
+	}
+
+	public boolean setController(ChatWindowController controller) {
+		if(this.controller == null) {
+			this.controller = controller;
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -55,13 +80,29 @@ public class Backend implements Runnable {
 		resume();
 	}
 
+	public void changeName(String name, boolean announce) {
+		if(self == null) {
+			setNameAtStart = name;
+			return;
+		}
+		String oldname = self.getName();
+		self.setName(name);
+		self.nameChangeProcessed();
+		if(announce)
+			sendMessage(oldname + " has changed their name to " + name);
+	}
+
 	/**
 	 * Queue a single message for sending.
 	 * @param m The Message to send.
 	 */
 	public void sendMessage(Message m) {
 		sendQueue.add(m);
-		resume();
+		//resume();
+	}
+
+	public void sendMessage(String s) {
+		sendQueue.add(new Message(self, s));
 	}
 
 	/**
@@ -70,7 +111,7 @@ public class Backend implements Runnable {
 	 */
 	public void sendMessages(Message[] m) {
 		receiveQueue.addAll(Arrays.asList(m));
-		resume();
+		//resume();
 	}
 
 	/**
@@ -108,22 +149,27 @@ public class Backend implements Runnable {
 	public void run() {
 		NetworkMethods.openConnection(hostname, port);
 		//TODO: Get unique id from networking.
+		self = new Client(Client.createID(null, new java.util.Date()));
+		if(setNameAtStart != null) {
+			self.setName(setNameAtStart);
+		}
 		while(running) {
 			//pause();
 			if(!sendQueue.isEmpty()) {
-				Message[] messages = (Message[])sendQueue.toArray();
+				Message[] messages = sendQueue.toArray(new Message[0]);
 				for(Message m : messages) {
 					sendQueue.remove(m);
+					receiveQueue.add(m);
 				}
-				NetworkMethods.sendMessage(messages);
+				//NetworkMethods.sendMessage(messages);
 			} else {
-				NetworkMethods.sendMessage(new Message[0]);
+				//NetworkMethods.sendMessage(new Message[0]);
 			}
-			NetworkMethods.receiveMessage();
+			//NetworkMethods.receiveMessage();
 			if(!receiveQueue.isEmpty()) {
 				Message m;
 				while((m = receiveQueue.poll()) != null) {
-					//TODO: Tell GUI to display message
+					controller.receiveMessage(m);
 				}
 			}
 			try {
