@@ -18,3 +18,18 @@ project(":client") {
 		from project(":lib").sourceSets.main.output.resourcesDir
 	}
 }
+
+project(":server") {
+	archivesBaseName = 'TalkBoxServer'
+	version = '0.1'
+	dependencies {
+		compile project(":lib")
+	}
+	jar {
+		manifest {
+			attributes("Main-Class": "talkbox.server.Main")
+		}
+		from project(":lib").sourceSets.main.output.classesDir
+		from project(":lib").sourceSets.main.output.resourcesDir
+	}
+}
