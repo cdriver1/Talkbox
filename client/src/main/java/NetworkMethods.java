@@ -83,6 +83,7 @@ public class NetworkMethods {
         } catch(SocketTimeoutException ex) {
 		} catch (IOException ex) {
             //error handling
+            ex.printStackTrace();
         } catch (ClassNotFoundException ex){
             //error handling
         }

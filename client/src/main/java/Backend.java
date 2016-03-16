@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.application.Platform;
 
 /**
  * This is the backend for the client. It is responsible for coordinating between the GUI and networking.
@@ -149,7 +150,10 @@ public class Backend implements Runnable {
 
 	public void addClients(HashMap<String, Client> clients) {
 		for(Client c : clients.values()) {
-			clientMap.put(c.id, c);
+			Client old = clientMap.put(c.id, c);
+			if(old != null && c.getName() == null) {
+				c.setName(old.getName());
+			}
 		}
 		updateClientList();
 	}
@@ -167,11 +171,13 @@ public class Backend implements Runnable {
 	public void updateClientList() {
 		Client[] clients = clientMap.values().toArray(new Client[0]);
 		String[] names = new String[clients.length];
-		int i = 0;
-		for(Client c : clients) {
-			names[i++] = c.getName();
-		}
-		controller.setOnlineNames(names);
+		Platform.runLater(() -> {
+			int i = 0;
+			for(Client c : clients) {
+				names[i++] = c.getName();
+			}
+			controller.setOnlineNames(names);
+		});
 	}
 
 	private synchronized void pause() {
@@ -187,7 +193,7 @@ public class Backend implements Runnable {
 
 	@Override
 	public void run() {
-		self = NetworkMethods.openConnection(hostname, port);
+		/*self = NetworkMethods.openConnection(hostname, port);
 		if(setNameAtStart != null) {
 			self.setName(setNameAtStart);
 		}
@@ -197,6 +203,7 @@ public class Backend implements Runnable {
 				Message[] messages = sendQueue.toArray(new Message[0]);
 				NetworkMethods.sendMessage(messages);
 				for(Message m : messages) {
+					controller.receiveMessage(m);
 					sendQueue.remove(m);
 				}
 			}
@@ -204,6 +211,59 @@ public class Backend implements Runnable {
 		try {
 			NetworkMethods.closeConnection();
 		} catch(IOException e) {
+		}*/
+		//TODO: Change back to NetworkMethods
+		try(Socket s = new Socket(hostname, port)) {
+			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+			ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+			self = (Client)in.readObject();
+			s.setSoTimeout(100);
+			if(setNameAtStart != null) {
+				self.setName(setNameAtStart);
+			}
+			while(running) {
+				try {
+					String ins = (String)in.readObject();
+					System.out.println(ins);
+					s.setSoTimeout(0);
+					switch(ins) {
+						case "message":
+							Message m = (Message)in.readObject();
+							addClient(m.sender);
+							controller.receiveMessage(m);
+							break;
+						case "clientDisconnect":
+							removeClient((Client)in.readObject());
+							break;
+						case "clientConnect":
+							addClient((Client)in.readObject());
+							break;
+						case "clients":
+							addClients((HashMap<String, Client>)in.readObject());
+							break;
+						default:
+							break;
+					}
+					s.setSoTimeout(100);
+				} catch(SocketTimeoutException e) {
+				}
+				if(!sendQueue.isEmpty()) {
+					Message[] messages = sendQueue.toArray(new Message[0]);
+					out.reset();
+					out.writeUTF("message");
+					out.writeObject(messages);
+					for(Message m : messages) {
+						sendQueue.remove(m);
+						controller.receiveMessage(m);
+					}
+				}
+			}
+			out.reset();
+			out.writeUTF("disconnect");
+			out.flush();
+			s.shutdownOutput();
+		} catch(IOException | ClassNotFoundException e) {
+			e.printStackTrace();
 		}
 	}
 }

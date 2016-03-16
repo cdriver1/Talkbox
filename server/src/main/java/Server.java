@@ -53,7 +53,7 @@ public class Server implements Runnable {
 		synchronized(clientMap) {
 			for(Client c : clientMap.values()) {
 				try {
-					c.writeUTF("clientConnect");
+					c.writeObject("clientConnect");
 					c.writeObject(client);
 				} catch(IOException e) {
 				}
@@ -64,10 +64,10 @@ public class Server implements Runnable {
 
 	private void removeClient(Client client) {
 		synchronized(clientMap) {
-			clientMap.remove(client);
+			clientMap.remove(client.id);
 			for(Client c : clientMap.values()) {
 				try {
-					c.writeUTF("clientDisconnect");
+					c.writeObject("clientDisconnect");
 					c.writeObject(client);
 				} catch(IOException e) {
 				}
@@ -97,7 +97,7 @@ public class Server implements Runnable {
 					continue;
 				}
 				try {
-					s.writeUTF("message");
+					s.writeObject("message");
 					s.writeObject(m);
 				} catch(IOException e) {
 				}
@@ -112,7 +112,7 @@ public class Server implements Runnable {
 				continue;
 			}
 			try {
-				c.writeUTF("message");
+				c.writeObject("message");
 				c.writeObject(message);
 			} catch(IOException e) {
 			}
@@ -161,9 +161,10 @@ public class Server implements Runnable {
 		@Override
 		public void run() {
 			try {
+				System.out.println(client.id + ": connected");
 				client.writeObject(client);
 				synchronized(clientMap) {
-					client.writeUTF("clients");
+					client.writeObject("clients");
 					client.writeObject(clientMap);
 				}
 				while(connected) {
@@ -172,6 +173,8 @@ public class Server implements Runnable {
 						case "message":
 							try {
 								Message[] messages = (Message[])client.readObject();
+								client.setName(messages[messages.length - 1].sender.getName());
+								System.out.println(client.id +": " + client.getName() + " sent " + messages.length + " messages.");
 								sendMessages(messages);
 							} catch(ClassNotFoundException e) {
 							}
@@ -191,6 +194,7 @@ public class Server implements Runnable {
 			}
 			connected = false;
 			removeClient(client);
+			System.out.println(client.id + ": disconnected");
 		}
 	}
 }
