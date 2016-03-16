@@ -2,6 +2,7 @@ package talkbox.client;
 
 import talkbox.lib.*;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.ResourceBundle;
 import java.util.concurrent.ThreadLocalRandom;
 import javafx.fxml.FXML;
@@ -9,6 +10,9 @@ import javafx.fxml.Initializable;
 import javafx.event.ActionEvent;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.ListView;
+import javafx.collections.*;
+import java.text.SimpleDateFormat;
 
 public class ChatWindowController implements Initializable {
 	@FXML
@@ -17,6 +21,8 @@ public class ChatWindowController implements Initializable {
 	private TextArea messageArea;
 	@FXML
 	private TextField messageField;
+	@FXML
+	private ListView onlineList;
 	private String name;
 
 	@FXML
@@ -39,7 +45,8 @@ public class ChatWindowController implements Initializable {
 	}
 
 	public void receiveMessage(Message m) {
-		String msg = m.sender.getName() + " <" + m.time.toString() + ">: " + m.text;
+		SimpleDateFormat time = new SimpleDateFormat("HH:mm:ss");
+		String msg = m.sender.getName() + " <" + time.format(m.time) + ">: " + m.text;
 		String txt = messageArea.getText() + "\n" + msg;
 		messageArea.setText(txt);
 	}
@@ -49,5 +56,10 @@ public class ChatWindowController implements Initializable {
 		name = "guest-" + ThreadLocalRandom.current().nextInt(1000, 10000);
 		nameField.setText(name);
 		NetworkMethods.backend.changeName(name, false);
+	}
+	
+	public void setOnlineNames(String[] Names){
+		ObservableList<String> names = FXCollections.observableArrayList(Arrays.asList(Names));
+		onlineList.setItems(names);
 	}
 }
