@@ -7,6 +7,7 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -36,7 +37,8 @@ public class Backend implements Runnable {
 	private ChatWindowController controller;
 	private final Thread thread;
 	private final AtomicBoolean started;
-	private final ConcurrentLinkedQueue<Message> sendQueue, receiveQueue;
+	private final ConcurrentLinkedQueue<Message> sendQueue;
+	private final HashMap<String, Client> clientMap;
 	private boolean running = true;
 	private Client self;
 	private String setNameAtStart;
@@ -44,17 +46,17 @@ public class Backend implements Runnable {
 	public Backend() {
 		this.controller = null;
 		sendQueue = new ConcurrentLinkedQueue<>();
-		receiveQueue = new ConcurrentLinkedQueue<>();
 		started = new AtomicBoolean();
 		thread = new Thread(this);
+		clientMap = new HashMap<>();
 	}
 
 	public Backend(ChatWindowController controller) {
 		this.controller = controller;
 		sendQueue = new ConcurrentLinkedQueue<>();
-		receiveQueue = new ConcurrentLinkedQueue<>();
 		started = new AtomicBoolean();
 		thread = new Thread(this);
+		clientMap = new HashMap<>();
 	}
 
 	public boolean setController(ChatWindowController controller) {
@@ -102,12 +104,12 @@ public class Backend implements Runnable {
 	 */
 	public void sendMessage(Message m) {
 		sendQueue.add(m);
-		resume();
+		//resume();
 	}
 
 	public void sendMessage(String s) {
 		sendQueue.add(new Message(self, s));
-		resume();
+		//resume();
 	}
 
 	/**
@@ -116,7 +118,7 @@ public class Backend implements Runnable {
 	 */
 	public void sendMessages(Message[] m) {
 		sendQueue.addAll(Arrays.asList(m));
-		resume();
+		//resume();
 	}
 
 	/**
@@ -125,7 +127,11 @@ public class Backend implements Runnable {
 	 * @param m The message that was received.
 	 */
 	public void receiveMessage(Message m) {
-		receiveQueue.add(m);
+		Client c = clientMap.get(m.sender.id);
+		if(c == null || !c.getName().equals(m.sender.getName())) {
+			addClient(c);
+		}
+		controller.receiveMessage(m);
 		//resume();
 	}
 
@@ -135,8 +141,37 @@ public class Backend implements Runnable {
 	 * @param m The array of messages that were received.
 	 */
 	public void receiveMessages(Message[] m) {
-		receiveQueue.addAll(Arrays.asList(m));
+		for(Message message : m) {
+			receiveMessage(message);
+		}
 		//resume();
+	}
+
+	public void addClients(HashMap<String, Client> clients) {
+		for(Client c : clients.values()) {
+			clientMap.put(c.id, c);
+		}
+		updateClientList();
+	}
+
+	public void addClient(Client client) {
+		clientMap.put(client.id, client);
+		updateClientList();
+	}
+
+	public void removeClient(Client client) {
+		clientMap.remove(client);
+		updateClientList();
+	}
+
+	public void updateClientList() {
+		Client[] clients = clientMap.values().toArray(new Client[0]);
+		String[] names = new String[clients.length];
+		int i = 0;
+		for(Client c : clients) {
+			names[i++] = c.getName();
+		}
+		controller.setOnlineNames(names);
 	}
 
 	private synchronized void pause() {
@@ -152,38 +187,23 @@ public class Backend implements Runnable {
 
 	@Override
 	public void run() {
-		//TODO: Change back to NetworkMethods
-		try(Socket s = new Socket(hostname, port)) {
-			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-			ObjectInputStream in = new ObjectInputStream(s.getInputStream());
-			self = (Client)in.readObject();
-			s.setSoTimeout(250);
-			if(setNameAtStart != null) {
-				self.setName(setNameAtStart);
-			}
-			while(running) {
-				try {
-					Message m = (Message)in.readObject();
-					controller.receiveMessage(m);
-				} catch(SocketTimeoutException e) {
-				}
-				if(!sendQueue.isEmpty()) {
-					Message[] messages = sendQueue.toArray(new Message[0]);
-					out.reset();
-					out.writeUTF("message");
-					out.writeObject(messages);
-					for(Message m : messages) {
-						sendQueue.remove(m);
-						controller.receiveMessage(m);
-					}
+		self = NetworkMethods.openConnection(hostname, port);
+		if(setNameAtStart != null) {
+			self.setName(setNameAtStart);
+		}
+		while(running) {
+			NetworkMethods.receiveMessage();
+			if(!sendQueue.isEmpty()) {
+				Message[] messages = sendQueue.toArray(new Message[0]);
+				NetworkMethods.sendMessage(messages);
+				for(Message m : messages) {
+					sendQueue.remove(m);
 				}
 			}
-			out.reset();
-			out.writeUTF("disconnect");
-			out.flush();
-			s.shutdownOutput();
-		} catch(IOException | ClassNotFoundException e) {
-			e.printStackTrace();
+		}
+		try {
+			NetworkMethods.closeConnection();
+		} catch(IOException e) {
 		}
 	}
 }

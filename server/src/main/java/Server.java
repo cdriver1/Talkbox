@@ -49,9 +49,29 @@ public class Server implements Runnable {
 		running = false;
 	}
 
-	public void removeClient(Client client) {
+	private void addClient(Client client) {
+		synchronized(clientMap) {
+			for(Client c : clientMap.values()) {
+				try {
+					c.writeUTF("clientConnect");
+					c.writeObject(client);
+				} catch(IOException e) {
+				}
+			}
+			clientMap.put(client.id, client);
+		}
+	}
+
+	private void removeClient(Client client) {
 		synchronized(clientMap) {
 			clientMap.remove(client);
+			for(Client c : clientMap.values()) {
+				try {
+					c.writeUTF("clientDisconnect");
+					c.writeObject(client);
+				} catch(IOException e) {
+				}
+			}
 		}
 	}
 
@@ -77,6 +97,7 @@ public class Server implements Runnable {
 					continue;
 				}
 				try {
+					s.writeUTF("message");
 					s.writeObject(m);
 				} catch(IOException e) {
 				}
@@ -91,6 +112,7 @@ public class Server implements Runnable {
 				continue;
 			}
 			try {
+				c.writeUTF("message");
 				c.writeObject(message);
 			} catch(IOException e) {
 			}
@@ -116,9 +138,7 @@ public class Server implements Runnable {
 			try {
 				Socket s = server.accept();
 				Client c = new Client(s);
-				synchronized(clientMap) {
-					clientMap.put(c.id, c);
-				}
+				addClient(c);
 				threadPool.submit(new ServerClient(c));
 			} catch(IOException e) {
 			}
@@ -142,6 +162,10 @@ public class Server implements Runnable {
 		public void run() {
 			try {
 				client.writeObject(client);
+				synchronized(clientMap) {
+					client.writeUTF("clients");
+					client.writeObject(clientMap);
+				}
 				while(connected) {
 					String ins = client.readUTF();
 					switch(ins) {

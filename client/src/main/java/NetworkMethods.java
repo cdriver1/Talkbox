@@ -4,6 +4,7 @@ import talkbox.lib.*;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.*;
 
 /**
@@ -20,14 +21,17 @@ public class NetworkMethods {
     public NetworkMethods(){
     }
 
-    public static void openConnection(String rcvrAddress, int port){ //using a String for the address cuts down on imports in classes that call this
+    public static Client openConnection(String rcvrAddress, int port){ //using a String for the address cuts down on imports in classes that call this
         try {
             sock = new Socket(rcvrAddress, port);
+			sock.setSoTimeout(100);
             objOut = new ObjectOutputStream(sock.getOutputStream());
             objIn = new ObjectInputStream(sock.getInputStream()); //construct the input stream after the output stream in case the server constructed the input stream first
-        }catch(IOException ex){
+			return (Client)objIn.readObject();
+        }catch(IOException | ClassNotFoundException ex){
             //error handling
         }
+		return null;
     }
     public static void closeConnection() throws IOException{
 		//The server needs to know that the client is disconnecting
@@ -44,15 +48,10 @@ public class NetworkMethods {
     public static boolean sendMessage(Message[] m){ //use an array parameter to send many messages at once
 		boolean wasSuccess = false;
         try {
-			if(m.length > 0) {
-				objOut.reset();
-            	objOut.writeUTF("message");
-            	objOut.writeObject(m);
-				wasSuccess = true;
-			} else {
-				objOut.writeUTF("none"); //use none instead of None for consistency
-				wasSuccess = true;
-			}
+			objOut.reset();
+            objOut.writeUTF("message");
+            objOut.writeObject(m);
+			wasSuccess = true;
         }catch(IOException ex){
         	wasSuccess = false;
         }
@@ -61,18 +60,28 @@ public class NetworkMethods {
 
     public static void receiveMessage() { //not sure why you had a parameter here, Messages contain the sender
         try {
-			Message received = (Message) objIn.readObject();
-			backend.receiveMessage(received);
-            /*String msg = objIn.readUTF();
+            String msg = objIn.readUTF();
+			sock.setSoTimeout(0);
             switch (msg) {
-                case "none":
-                    break;
                 case "message":
-                    Message[] received = (Message[]) objIn.readObject();
-                    backend.receiveMessages(received);
-                break;
-            }*/
-        } catch (IOException ex) {
+                    Message received = (Message) objIn.readObject();
+                    backend.receiveMessage(received);
+                	break;
+				case "clientConnect":
+					backend.addClient((Client)objIn.readObject());
+					break;
+				case "clientDisconnect":
+					backend.removeClient((Client)objIn.readObject());
+					break;
+				case "clients":
+					backend.addClients((HashMap<String, Client>)objIn.readObject());
+					break;
+				default:
+					break;
+            }
+			sock.setSoTimeout(100);
+        } catch(SocketTimeoutException ex) {
+		} catch (IOException ex) {
             //error handling
         } catch (ClassNotFoundException ex){
             //error handling
