@@ -20,18 +20,23 @@ public class NetworkMethods {
     public NetworkMethods(){
     }
 
-    public static void openConnection(String rcvrAddress, int port){ //using a String for the address cuts down on imports in classes that call this
+    public static Client openConnection(String rcvrAddress, int port){ //using a String for the address cuts down on imports in classes that call this
         try {
             sock = new Socket(rcvrAddress, port);
+			sock.setSoTimeout(250); //block on reads for this many ms
             objOut = new ObjectOutputStream(sock.getOutputStream());
             objIn = new ObjectInputStream(sock.getInputStream()); //construct the input stream after the output stream in case the server constructed the input stream first
-        }catch(IOException ex){
+			return (Client)objIn.readObject();
+        }catch(IOException | ClassNotFoundException ex){
             //error handling
+            ex.printStackTrace();
+			return null;
         }
     }
     public static void closeConnection() throws IOException{
 		//The server needs to know that the client is disconnecting
 		objOut.writeUTF("disconnect");
+		objOut.flush();
         sock.close();
     }
     /*
@@ -42,36 +47,23 @@ public class NetworkMethods {
     public static boolean sendMessage(Message[] m){ //use an array parameter to be consistent with receiveMessage
 		boolean wasSuccess = false;
         try {
-			if(m.length > 0) {
-            	objOut.writeUTF("message");
-            	objOut.writeObject(m);
-				wasSuccess = true;
-			} else {
-				objOut.writeUTF("none"); //use none instead of None for consistency
-				wasSuccess = true;
-			}
+            objOut.writeUTF("message");
+            objOut.writeUnshared(m);
+			objOut.flush();
+			wasSuccess = true;
         }catch(IOException ex){
         	wasSuccess = false;
         }
 		return wasSuccess;
     }
 
-    public static void receiveMessage() { //not sure why you had a parameter here, Messages contain the sender
+    public static Message[] receiveMessage() { //not sure why you had a parameter here, Messages contain the sender
         try {
-            String msg = objIn.readUTF();
-            switch (msg) {
-                case "none":
-                    break;
-                case "message":
-                    Message[] received = (Message[]) objIn.readObject();
-                    backend.receiveMessages(received);
-                break;
-            }
-        } catch (IOException ex) {
-            //error handling
-        } catch (ClassNotFoundException ex){
+            return (Message[]) objIn.readObject();
+        } catch (IOException | ClassNotFoundException ex) {
             //error handling
         }
+		return null;
     }
 
     public static boolean sendFile(String fileToSend){

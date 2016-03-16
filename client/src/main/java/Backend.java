@@ -1,6 +1,10 @@
 package talkbox.client;
 
 import talkbox.lib.*;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -12,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class Backend implements Runnable {
 	//TODO: Get server hostname
-	public static final String hostname = "";
+	public static final String hostname = "java.cjdeakin.me";
 	public static final int port = 5476;
 	/**
 	 * Create a new Backend, start it, then return it.
@@ -98,11 +102,12 @@ public class Backend implements Runnable {
 	 */
 	public void sendMessage(Message m) {
 		sendQueue.add(m);
-		//resume();
+		resume();
 	}
 
 	public void sendMessage(String s) {
 		sendQueue.add(new Message(self, s));
+		resume();
 	}
 
 	/**
@@ -110,8 +115,8 @@ public class Backend implements Runnable {
 	 * @param m An array of Messages to send.
 	 */
 	public void sendMessages(Message[] m) {
-		receiveQueue.addAll(Arrays.asList(m));
-		//resume();
+		sendQueue.addAll(Arrays.asList(m));
+		resume();
 	}
 
 	/**
@@ -147,39 +152,37 @@ public class Backend implements Runnable {
 
 	@Override
 	public void run() {
-		NetworkMethods.openConnection(hostname, port);
-		//TODO: Get unique id from networking.
-		self = new Client(Client.createID(null, new java.util.Date()));
-		if(setNameAtStart != null) {
-			self.setName(setNameAtStart);
-		}
-		while(running) {
-			//pause();
-			if(!sendQueue.isEmpty()) {
-				Message[] messages = sendQueue.toArray(new Message[0]);
-				for(Message m : messages) {
-					sendQueue.remove(m);
-					receiveQueue.add(m);
-				}
-				//NetworkMethods.sendMessage(messages);
-			} else {
-				//NetworkMethods.sendMessage(new Message[0]);
+		try(Socket s = new Socket(hostname, port)) {
+			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+			ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+			self = (Client)in.readObject();
+			s.setSoTimeout(250);
+			if(setNameAtStart != null) {
+				self.setName(setNameAtStart);
 			}
-			//NetworkMethods.receiveMessage();
-			if(!receiveQueue.isEmpty()) {
-				Message m;
-				while((m = receiveQueue.poll()) != null) {
+			while(running) {
+				try {
+					Message m = (Message)in.readObject();
 					controller.receiveMessage(m);
+				} catch(SocketTimeoutException e) {
+				}
+				if(!sendQueue.isEmpty()) {
+					Message[] messages = sendQueue.toArray(new Message[0]);
+					out.reset();
+					out.writeUTF("message");
+					out.writeObject(messages);
+					for(Message m : messages) {
+						sendQueue.remove(m);
+						controller.receiveMessage(m);
+					}
 				}
 			}
-			try {
-				Thread.sleep(10);
-			} catch(InterruptedException e) {
-			}
-		}
-		try {
-			NetworkMethods.closeConnection();
-		} catch(IOException e) {
+			out.reset();
+			out.writeUTF("disconnect");
+			out.flush();
+			s.shutdownOutput();
+		} catch(IOException | ClassNotFoundException e) {
+			e.printStackTrace();
 		}
 	}
 }

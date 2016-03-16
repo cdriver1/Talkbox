@@ -1,5 +1,8 @@
 package talkbox.lib;
 
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
 import java.net.Socket;
 import java.util.Date;
@@ -23,13 +26,17 @@ public class Client implements Serializable {
 	private String name;
 	private transient boolean nameChanged = false;
 	private transient final Socket socket;
+	private transient final ObjectInputStream in;
+	private transient final ObjectOutputStream out;
 
 	/**
 	 * Create a new Client from a Socket.
 	 * @param  socket The Socket that connects to this Client.
 	 */
-	public Client(Socket socket) {
+	public Client(Socket socket) throws IOException {
 		this.socket = socket;
+		out = new ObjectOutputStream(socket.getOutputStream());
+		in = new ObjectInputStream(socket.getInputStream());
 		id = createID(socket, new Date());
 	}
 
@@ -38,8 +45,10 @@ public class Client implements Serializable {
 	 * @param   socket The Socket that connects to this Client.
 	 * @param   date The Date when this Client connected.
 	 */
-	public Client(Socket socket, Date date) {
+	public Client(Socket socket, Date date) throws IOException {
 		this.socket = socket;
+		out = new ObjectOutputStream(socket.getOutputStream());
+		in = new ObjectInputStream(socket.getInputStream());
 		id = createID(socket, date);
 	}
 
@@ -49,6 +58,8 @@ public class Client implements Serializable {
 	 */
 	public Client(String id) {
 		this.socket = null;
+		this.in = null;
+		this.out = null;
 		this.id = id;
 	}
 
@@ -57,9 +68,11 @@ public class Client implements Serializable {
 	 * @param id The unique id of this Client.
 	 * @param socket The Socket that connects to this Client.
 	 */
-	public Client(String id, Socket socket) {
+	public Client(String id, Socket socket) throws IOException {
 		this.id = id;
 		this.socket = socket;
+		out = new ObjectOutputStream(socket.getOutputStream());
+		in = new ObjectInputStream(socket.getInputStream());
 	}
 
 	/**
@@ -100,6 +113,26 @@ public class Client implements Serializable {
 	 */
 	public Socket getSocket() {
 		return socket;
+	}
+
+	public void writeUTF(String str) throws IOException {
+		out.reset();
+		out.writeUTF(str);
+		out.flush();
+	}
+
+	public void writeObject(Object o) throws IOException {
+		out.reset();
+		out.writeObject(o);
+		out.flush();
+	}
+
+	public String readUTF() throws IOException {
+		return in.readUTF();
+	}
+
+	public Object readObject() throws IOException, ClassNotFoundException {
+		return in.readObject();
 	}
 
 	/**

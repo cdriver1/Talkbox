@@ -17,8 +17,8 @@ public class Server implements Runnable {
 	private final Thread thread;
 	private final AtomicBoolean started;
 	private final ExecutorService threadPool;
-	private final HashMap<String, ClientManager> clientMap;
-	private boolean running = true;
+	private final HashMap<String, Client> clientMap;
+	private boolean running = true, stopped = false;
 
 	public Server(int port) throws IOException {
 		server = new ServerSocket(port);
@@ -55,37 +55,59 @@ public class Server implements Runnable {
 		}
 	}
 
+	public Client[] getClients() {
+		synchronized(clientMap) {
+			return clientMap.values().toArray(new Client[0]);
+		}
+	}
+
 	public void sendMessages(Message[] messages) {
 		for(Message m : messages) {
 			Client[] recipients = m.getRecipients();
-			if(recipients.length == 0) {
+			if(recipients == null || recipients.length == 0) {
 				sendToAll(m);
 				continue;
 			}
-			for(Client recipient : recipients) {
-				if(recipient.id.equals(m.sender.id))
-					continue;
-				ClientManager cm;
+			for(Client r : recipients) {
+				Client s;
 				synchronized(clientMap) {
-					cm = clientMap.get(recipient.id);
+					s = clientMap.get(r.id);
 				}
-				if(cm == null)
+				if(s == null) {
 					continue;
-				cm.sendMessage(m);
+				}
+				try {
+					s.writeObject(m);
+				} catch(IOException e) {
+				}
 			}
 		}
 	}
 
 	public void sendToAll(Message message) {
-		ClientManager[] managers;
-		synchronized(clientMap) {
-			managers = clientMap.values().toArray(new ClientManager[0]);
-		}
-		for(ClientManager manager : managers) {
-			if(message.sender.id == manager.client.id)
+		Client[] clients = getClients();
+		for(Client c : clients) {
+			if(c.id.equals(message.sender.id)) {
 				continue;
-			manager.sendMessage(message);
+			}
+			try {
+				c.writeObject(message);
+			} catch(IOException e) {
+			}
 		}
+	}
+
+	public synchronized void join() {
+		if(stopped)
+			return;
+		try {
+			wait();
+		} catch(InterruptedException e) {
+		}
+	}
+
+	private synchronized void unjoin() {
+		notifyAll();
 	}
 
 	@Override
@@ -94,19 +116,57 @@ public class Server implements Runnable {
 			try {
 				Socket s = server.accept();
 				Client c = new Client(s);
-				ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-				ObjectInputStream in = new ObjectInputStream(s.getInputStream());
-				ClientManager cm = new ClientManager(this, c, out, in);
 				synchronized(clientMap) {
-					clientMap.put(c.id, cm);
+					clientMap.put(c.id, c);
 				}
-				threadPool.submit(cm);
+				threadPool.submit(new ServerClient(c));
 			} catch(IOException e) {
 			}
 		}
 		try {
 			server.close();
 		} catch(IOException e) {
+		}
+		stopped = true;
+		unjoin();
+	}
+
+	private class ServerClient implements Runnable {
+		private final Client client;
+		private boolean connected = true;
+		private ServerClient(Client client) {
+			this.client = client;
+		}
+
+		@Override
+		public void run() {
+			try {
+				client.writeObject(client);
+				while(connected) {
+					String ins = client.readUTF();
+					switch(ins) {
+						case "message":
+							try {
+								Message[] messages = (Message[])client.readObject();
+								sendMessages(messages);
+							} catch(ClassNotFoundException e) {
+							}
+							break;
+						case "disconnect":
+							connected = false;
+							client.getSocket().shutdownOutput();
+							break;
+					}
+				}
+			} catch(IOException e) {
+				e.printStackTrace();
+			}
+			try {
+				client.getSocket().close();
+			} catch(IOException e) {
+			}
+			connected = false;
+			removeClient(client);
 		}
 	}
 }

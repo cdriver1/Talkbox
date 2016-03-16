@@ -58,6 +58,8 @@ public class Message implements Serializable {
 	 * @return The Clients that this Message is intended for.
 	 */
 	public Client[] getRecipients() {
-		return (Client[])recipients.toArray();
+		if(recipients == null || recipients.size() <= 0)
+			return null;
+		return recipients.toArray(new Client[0]);
 	}
 }
