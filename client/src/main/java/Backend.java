@@ -152,6 +152,7 @@ public class Backend implements Runnable {
 
 	@Override
 	public void run() {
+		//TODO: Change back to NetworkMethods
 		try(Socket s = new Socket(hostname, port)) {
 			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
 			ObjectInputStream in = new ObjectInputStream(s.getInputStream());
