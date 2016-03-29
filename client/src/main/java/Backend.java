@@ -8,6 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.Platform;
@@ -17,7 +18,6 @@ import javafx.application.Platform;
  * For ease of use, the main thread should create a new backend with the static method Backend.Backend().
  */
 public class Backend implements Runnable {
-	//TODO: Get server hostname
 	public static final String hostname = "java.cjdeakin.me";
 	public static final int port = 5476;
 	/**
@@ -39,7 +39,8 @@ public class Backend implements Runnable {
 	private final Thread thread;
 	private final AtomicBoolean started;
 	private final ConcurrentLinkedQueue<Message> sendQueue;
-	private final HashMap<String, Client> clientMap;
+	private final ConcurrentHashMap<String, Client> clientMap;
+	private final ConcurrentHashMap<String, FileMessage> sharedFiles;
 	private boolean running = true;
 	private Client self;
 	private String setNameAtStart;
@@ -49,7 +50,8 @@ public class Backend implements Runnable {
 		sendQueue = new ConcurrentLinkedQueue<>();
 		started = new AtomicBoolean();
 		thread = new Thread(this);
-		clientMap = new HashMap<>();
+		clientMap = new ConcurrentHashMap<>();
+		sharedFiles = new ConcurrentHashMap<>();
 	}
 
 	public Backend(ChatWindowController controller) {
@@ -57,9 +59,16 @@ public class Backend implements Runnable {
 		sendQueue = new ConcurrentLinkedQueue<>();
 		started = new AtomicBoolean();
 		thread = new Thread(this);
-		clientMap = new HashMap<>();
+		clientMap = new ConcurrentHashMap<>();
+		sharedFiles = new ConcurrentHashMap<>();
 	}
 
+	/**
+	 * Set the controller this Backend should talk to. If the controller has
+	 * already been set, this method will do nothing.
+	 * @param  controller The ChatWindowController to talk to.
+	 * @return True if set, false otherwise.
+	 */
 	public boolean setController(ChatWindowController controller) {
 		if(this.controller == null) {
 			this.controller = controller;
@@ -87,6 +96,12 @@ public class Backend implements Runnable {
 		resume();
 	}
 
+	/**
+	 * Change the user's screen name. This method should usually be called with
+	 * annouce as true so that other Clients will be notified.
+	 * @param  name The new name to use.
+	 * @param  announce Should the name change send a message to everyone.
+	 */
 	public void changeName(String name, boolean announce) {
 		if(self == null) {
 			setNameAtStart = name;
@@ -108,6 +123,10 @@ public class Backend implements Runnable {
 		//resume();
 	}
 
+	/**
+	 * Queue a single message for sending.
+	 * @param s The text of the Message to send.
+	 */
 	public void sendMessage(String s) {
 		sendQueue.add(new Message(self, s));
 		//resume();
@@ -120,6 +139,57 @@ public class Backend implements Runnable {
 	public void sendMessages(Message[] m) {
 		sendQueue.addAll(Arrays.asList(m));
 		//resume();
+	}
+
+	/**
+	 * Queue a single ImageMessage.
+	 * @param f The File of the image to send.
+	 * @throws IOException
+	 */
+	public void sendImage(java.io.File f) throws IOException {
+		sendQueue.add(new ImageMessage(self, f));
+	}
+
+	/**
+	 * Queue a single ImageMessage with text.
+	 * @param s The text of the Message to send.
+	 * @param f The File of the image to send.
+	 * @throws IOException
+	 */
+	public void sendImage(String s, java.io.File f) throws IOException {
+		sendQueue.add(new ImageMessage(self, s, f));
+	}
+
+	/**
+	 * Queue a single ImageMessage with text and specified recipients.
+	 * @param s The text of the Message to send.
+	 * @param f The File of the image to send.
+	 * @param recipients The intended recipients.
+	 * @throws IOException
+	 */
+	public void sendImage(String s, java.io.File f, Client... recipients) throws IOException {
+		sendQueue.add(new ImageMessage(self, s, recipients, f));
+	}
+
+	/**
+	 * Queue a single FileMessage.
+	 * @param f The File to share.
+	 */
+	public void sendFile(java.io.File f) {
+		FileMessage fm = new FileMessage(self, f);
+		sharedFiles.put(f.getAbsolutePath(), fm);
+		sendQueue.add(fm);
+	}
+
+	/**
+	 * Queue a single FileMessage to specified recipients.
+	 * @param f The File to share.
+	 * @param recipients The intended recipients.
+	 */
+	public void sendFile(java.io.File f, Client... recipients) {
+		FileMessage fm = new FileMessage(self, f, recipients);
+		sharedFiles.put(f.getAbsolutePath(), fm);
+		sendQueue.add(fm);
 	}
 
 	/**
@@ -148,6 +218,24 @@ public class Backend implements Runnable {
 		//resume();
 	}
 
+	/**
+	 * Add all Clients in a ConcurrentHashMap to this Backend.
+	 * @param  clients The ConcurrentHashMap to add.
+	 */
+	public void addClients(ConcurrentHashMap<String, Client> clients) {
+		for(Client c : clients.values()) {
+			Client old = clientMap.put(c.id, c);
+			if(old != null && c.getName() == null) {
+				c.setName(old.getName());
+			}
+		}
+		updateClientList();
+	}
+
+	/**
+	 * Like {@link #addClients(ConcurrentHashMap)}, but for a HashMap.
+	 * @param  clients The HashMap to add.
+	 */
 	public void addClients(HashMap<String, Client> clients) {
 		for(Client c : clients.values()) {
 			Client old = clientMap.put(c.id, c);
@@ -158,16 +246,27 @@ public class Backend implements Runnable {
 		updateClientList();
 	}
 
+	/**
+	 * Add a single Client.
+	 * @param client The Client to add.
+	 */
 	public void addClient(Client client) {
 		clientMap.put(client.id, client);
 		updateClientList();
 	}
 
+	/**
+	 * Remove a Client.
+	 * @param client The Client to remove.
+	 */
 	public void removeClient(Client client) {
 		clientMap.remove(client);
 		updateClientList();
 	}
 
+	/**
+	 * Update the GUI with the latest names.
+	 */
 	public void updateClientList() {
 		Client[] clients = clientMap.values().toArray(new Client[0]);
 		String[] names = new String[clients.length];
