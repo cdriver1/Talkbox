@@ -82,6 +82,14 @@ public class Client implements Serializable {
 		return name;
 	}
 
+	@Override
+	public String toString() {
+		if(name == null) {
+			return "";
+		}
+		return name;
+	}
+
 	/**
 	 * Change the screenname of this Client.
 	 * @param name The new screenname.

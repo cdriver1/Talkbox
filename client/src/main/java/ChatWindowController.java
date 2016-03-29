@@ -22,7 +22,7 @@ public class ChatWindowController implements Initializable {
 	@FXML
 	private TextField messageField;
 	@FXML
-	private ListView onlineList;
+	private ListView<Client> onlineList;
 	private String name;
 
 	@FXML
@@ -57,9 +57,9 @@ public class ChatWindowController implements Initializable {
 		nameField.setText(name);
 		NetworkMethods.backend.changeName(name, false);
 	}
-	
-	public void setOnlineNames(String[] Names){
-		ObservableList<String> names = FXCollections.observableArrayList(Arrays.asList(Names));
+
+	public void setOnlineNames(Client[] Names){
+		ObservableList<Client> names = FXCollections.observableArrayList(Arrays.asList(Names));
 		onlineList.setItems(names);
 	}
 }

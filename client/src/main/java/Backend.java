@@ -110,6 +110,8 @@ public class Backend implements Runnable {
 		String oldname = self.getName();
 		self.setName(name);
 		self.nameChangeProcessed();
+		clientMap.put(self.id, self);
+		updateClientList();
 		if(announce)
 			sendMessage(oldname + " has changed their name to " + name);
 	}
@@ -269,13 +271,16 @@ public class Backend implements Runnable {
 	 */
 	public void updateClientList() {
 		Client[] clients = clientMap.values().toArray(new Client[0]);
-		String[] names = new String[clients.length];
+		/*String[] names = new String[clients.length];
 		Platform.runLater(() -> {
 			int i = 0;
 			for(Client c : clients) {
 				names[i++] = c.getName();
 			}
 			controller.setOnlineNames(names);
+		});*/
+		Platform.runLater(() -> {
+			controller.setOnlineNames(clients);
 		});
 	}
 
