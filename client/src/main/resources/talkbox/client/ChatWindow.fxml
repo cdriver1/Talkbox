@@ -16,7 +16,8 @@
             <Insets />
          </opaqueInsets>
       </TextField>
-      <TextArea fx:id="messageArea" layoutX="29.0" layoutY="43.0" prefHeight="290.0" prefWidth="300.0" AnchorPane.bottomAnchor="43.0" AnchorPane.leftAnchor="29.0" AnchorPane.rightAnchor="135.0" AnchorPane.topAnchor="43.0" />
+      <!--<TextArea fx:id="messageArea" layoutX="29.0" layoutY="43.0" prefHeight="290.0" prefWidth="300.0" AnchorPane.bottomAnchor="43.0" AnchorPane.leftAnchor="29.0" AnchorPane.rightAnchor="135.0" AnchorPane.topAnchor="43.0" />-->
+	  <ListView fx:id="messageList" layoutX="29.0" layoutY="43.0" prefHeight="290.0" prefWidth="300.0" AnchorPane.bottomAnchor="43.0" AnchorPane.leftAnchor="29.0" AnchorPane.rightAnchor="135.0" AnchorPane.topAnchor="43.0" />
       <TextField fx:id="messageField" layoutX="29.0" layoutY="402.0" onAction="#sendMessage" prefHeight="31.0" prefWidth="300.0" AnchorPane.bottomAnchor="12.0" AnchorPane.leftAnchor="29.0" AnchorPane.rightAnchor="135.0" />
       <ListView fx:id="onlineList" layoutX="398.0" layoutY="43.0" prefHeight="395.0" prefWidth="120.0" AnchorPane.bottomAnchor="7.0" AnchorPane.rightAnchor="7.0" AnchorPane.topAnchor="43.0" />
       <Label layoutX="344.0" layoutY="14.0" prefHeight="21.0" prefWidth="111.0" text="Online" AnchorPane.rightAnchor="9.0" AnchorPane.topAnchor="14.0" />

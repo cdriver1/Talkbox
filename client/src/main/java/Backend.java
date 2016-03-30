@@ -11,14 +11,13 @@ import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javafx.application.Platform;
 
 /**
  * This is the backend for the client. It is responsible for coordinating between the GUI and networking.
  * For ease of use, the main thread should create a new backend with the static method Backend.Backend().
  */
 public class Backend implements Runnable {
-	public static final String hostname = "java.cjdeakin.me";
+	public static final String hostname = "localhost";
 	public static final int port = 5476;
 	/**
 	 * Create a new Backend, start it, then return it.
@@ -111,7 +110,7 @@ public class Backend implements Runnable {
 		self.setName(name);
 		self.nameChangeProcessed();
 		clientMap.put(self.id, self);
-		updateClientList();
+		controller.addOnline(self);
 		if(announce)
 			sendMessage(oldname + " has changed their name to " + name);
 	}
@@ -254,7 +253,8 @@ public class Backend implements Runnable {
 	 */
 	public void addClient(Client client) {
 		clientMap.put(client.id, client);
-		updateClientList();
+		controller.addOnline(client);
+		//updateClientList();
 	}
 
 	/**
@@ -263,7 +263,8 @@ public class Backend implements Runnable {
 	 */
 	public void removeClient(Client client) {
 		clientMap.remove(client);
-		updateClientList();
+		controller.removeOnline(client);
+		//updateClientList();
 	}
 
 	/**
@@ -279,9 +280,7 @@ public class Backend implements Runnable {
 			}
 			controller.setOnlineNames(names);
 		});*/
-		Platform.runLater(() -> {
-			controller.setOnlineNames(clients);
-		});
+		controller.setOnlineNames(clients);
 	}
 
 	private synchronized void pause() {
@@ -317,13 +316,16 @@ public class Backend implements Runnable {
 		} catch(IOException e) {
 		}*/
 		//TODO: Change back to NetworkMethods
+		System.out.println("Connecting...");
 		try(Socket s = new Socket(hostname, port)) {
+			System.out.println("Connected");
 			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
 			ObjectInputStream in = new ObjectInputStream(s.getInputStream());
 			self = (Client)in.readObject();
 			s.setSoTimeout(100);
 			if(setNameAtStart != null) {
 				self.setName(setNameAtStart);
+				sendMessage(new Message(self, null));
 			}
 			while(running) {
 				try {
