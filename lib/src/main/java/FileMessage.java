@@ -19,4 +19,10 @@ public class FileMessage extends Message {
 		this.file = file;
 		name = file.getName();
 	}
+
+	public FileMessage(FileMessage fm) {
+		super(fm.sender, fm.text, fm.getRecipients());
+		this.file = fm.file;
+		this.name = fm.name;
+	}
 }

@@ -35,7 +35,7 @@ public class Message implements Serializable {
 	 * @param   text The message text.
 	 * @param   recipients An array of Clients that are the intended recipients.
 	 */
-	public Message(Client sender, String text, Client[] recipients) {
+	public Message(Client sender, String text, Client... recipients) {
 		this.sender = sender;
 		this.text = text;
 		time = new Date();

@@ -6,6 +6,7 @@ import java.net.SocketTimeoutException;
 import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.io.IOException;
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -147,7 +148,7 @@ public class Backend implements Runnable {
 	 * @param f The File of the image to send.
 	 * @throws IOException
 	 */
-	public void sendImage(java.io.File f) throws IOException {
+	public void sendImage(File f) throws IOException {
 		sendQueue.add(new ImageMessage(self, f));
 	}
 
@@ -157,7 +158,7 @@ public class Backend implements Runnable {
 	 * @param f The File of the image to send.
 	 * @throws IOException
 	 */
-	public void sendImage(String s, java.io.File f) throws IOException {
+	public void sendImage(String s, File f) throws IOException {
 		sendQueue.add(new ImageMessage(self, s, f));
 	}
 
@@ -168,7 +169,7 @@ public class Backend implements Runnable {
 	 * @param recipients The intended recipients.
 	 * @throws IOException
 	 */
-	public void sendImage(String s, java.io.File f, Client... recipients) throws IOException {
+	public void sendImage(String s, File f, Client... recipients) throws IOException {
 		sendQueue.add(new ImageMessage(self, s, recipients, f));
 	}
 
@@ -176,7 +177,7 @@ public class Backend implements Runnable {
 	 * Queue a single FileMessage.
 	 * @param f The File to share.
 	 */
-	public void sendFile(java.io.File f) {
+	public void sendFile(File f) {
 		FileMessage fm = new FileMessage(self, f);
 		sharedFiles.put(f.getAbsolutePath(), fm);
 		sendQueue.add(fm);
@@ -187,7 +188,7 @@ public class Backend implements Runnable {
 	 * @param f The File to share.
 	 * @param recipients The intended recipients.
 	 */
-	public void sendFile(java.io.File f, Client... recipients) {
+	public void sendFile(File f, Client... recipients) {
 		FileMessage fm = new FileMessage(self, f, recipients);
 		sharedFiles.put(f.getAbsolutePath(), fm);
 		sendQueue.add(fm);
@@ -203,7 +204,13 @@ public class Backend implements Runnable {
 		if(c == null || !c.getName().equals(m.sender.getName())) {
 			addClient(c);
 		}
-		controller.receiveMessage(m);
+		if(m instanceof DataPacket) {
+			if(m instanceof FilePacket) {
+				//TODO: add code to handle FilePackets.
+			}
+		} else {
+			controller.receiveMessage(m);
+		}
 		//resume();
 	}
 
@@ -254,7 +261,6 @@ public class Backend implements Runnable {
 	public void addClient(Client client) {
 		clientMap.put(client.id, client);
 		controller.addOnline(client);
-		//updateClientList();
 	}
 
 	/**
@@ -264,7 +270,6 @@ public class Backend implements Runnable {
 	public void removeClient(Client client) {
 		clientMap.remove(client);
 		controller.removeOnline(client);
-		//updateClientList();
 	}
 
 	/**
@@ -272,14 +277,6 @@ public class Backend implements Runnable {
 	 */
 	public void updateClientList() {
 		Client[] clients = clientMap.values().toArray(new Client[0]);
-		/*String[] names = new String[clients.length];
-		Platform.runLater(() -> {
-			int i = 0;
-			for(Client c : clients) {
-				names[i++] = c.getName();
-			}
-			controller.setOnlineNames(names);
-		});*/
 		controller.setOnlineNames(clients);
 	}
 
@@ -296,25 +293,6 @@ public class Backend implements Runnable {
 
 	@Override
 	public void run() {
-		/*self = NetworkMethods.openConnection(hostname, port);
-		if(setNameAtStart != null) {
-			self.setName(setNameAtStart);
-		}
-		while(running) {
-			NetworkMethods.receiveMessage();
-			if(!sendQueue.isEmpty()) {
-				Message[] messages = sendQueue.toArray(new Message[0]);
-				NetworkMethods.sendMessage(messages);
-				for(Message m : messages) {
-					controller.receiveMessage(m);
-					sendQueue.remove(m);
-				}
-			}
-		}
-		try {
-			NetworkMethods.closeConnection();
-		} catch(IOException e) {
-		}*/
 		//TODO: Change back to NetworkMethods
 		System.out.println("Connecting...");
 		try(Socket s = new Socket(hostname, port)) {
@@ -360,7 +338,9 @@ public class Backend implements Runnable {
 					out.writeObject(messages);
 					for(Message m : messages) {
 						sendQueue.remove(m);
-						controller.receiveMessage(m);
+						if(!(m instanceof DataPacket)) {
+							controller.receiveMessage(m);
+						}
 					}
 				}
 			}
