@@ -4,6 +4,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -16,7 +18,7 @@ import javafx.stage.WindowEvent;
 
 public class Main extends Application {
 	private static final ExecutorService threadPool = Executors.newCachedThreadPool();
-	
+
 	@Override
 	public void start(Stage stage) throws Exception {
 		NetworkMethods.backend = new Backend();
@@ -57,7 +59,8 @@ public class Main extends Application {
 								NetworkMethods.backend.sendFile(f);
 								break;
 						}
-					} catch(Exception e) {
+					} catch(Exception ex) {
+						Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
 					}
 				}
 			} else {
@@ -69,7 +72,7 @@ public class Main extends Application {
 		stage.setScene(scene);
 		stage.show();
 	}
-	
+
 	public static void submit(Runnable r) {
 		threadPool.submit(r);
 	}

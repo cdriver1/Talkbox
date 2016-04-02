@@ -27,7 +27,7 @@ public class FilePacket extends FileMessage implements DataPacket, Comparable<Fi
 	 * sequence.
 	 */
 	public FilePacket(FileMessage fm, byte[] bytes, int start, int sequence, long totalBytes) {
-		super(fm);
+		super(fm.sender, fm);
 		this.bytes = bytes;
 		this.start = start;
 		this.sequence = sequence;
@@ -43,7 +43,7 @@ public class FilePacket extends FileMessage implements DataPacket, Comparable<Fi
 	 * sequence.
 	 */
 	public FilePacket(FileMessage fm, byte[] bytes, long totalBytes) {
-		super(fm);
+		super(fm.sender, fm);
 		this.bytes = bytes;
 		this.start = 0;
 		this.sequence = 0;
@@ -60,7 +60,7 @@ public class FilePacket extends FileMessage implements DataPacket, Comparable<Fi
 	 * @param size The size of the byte array encapsulated by this FilePacket.
 	 */
 	public FilePacket(FileMessage fm, byte[] bytes, int size) {
-		super(fm);
+		super(fm.sender, fm);
 		if(size > bytes.length) {
 			size = bytes.length;
 		}
@@ -80,7 +80,7 @@ public class FilePacket extends FileMessage implements DataPacket, Comparable<Fi
 	 * @param bytes The byte array to encapsulate.
 	 */
 	public FilePacket(FileMessage fm, byte[] bytes) {
-		super(fm);
+		super(fm.sender, fm);
 		this.bytes = bytes;
 		this.start = 0;
 		this.sequence = 0;

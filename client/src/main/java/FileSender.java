@@ -3,8 +3,11 @@ package talkbox.client;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import talkbox.lib.*;
 
 public class FileSender implements Runnable {
@@ -20,7 +23,11 @@ public class FileSender implements Runnable {
 		in = new BufferedInputStream(new FileInputStream(fm.file));
 		from = 0;
 		to = fm.file.length();
-		this.recipients = Arrays.asList(recipients);
+		if(recipients != null) {
+			this.recipients = Arrays.asList(recipients);
+		} else {
+			this.recipients = new ArrayList<>();
+		}
 	}
 
 	public static FileSender FileSender(Backend backend, FileMessage fm, Client... recipients) throws IOException {
@@ -40,6 +47,7 @@ public class FileSender implements Runnable {
 					r += in.read(bytes, r, (int)(size - r));
 				}
 				FilePacket fp = new FilePacket(fm, bytes);
+				fp.setRecipients(recipients);
 				backend.sendMessage(fp);
 			} else {
 				FilePacket last = null;
@@ -74,8 +82,8 @@ public class FileSender implements Runnable {
 					backend.sendMessage(last);
 				}
 			}
-		} catch(Exception e) {
-			e.printStackTrace();
+		} catch(Exception ex) {
+			Logger.getLogger(FileSender.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 }

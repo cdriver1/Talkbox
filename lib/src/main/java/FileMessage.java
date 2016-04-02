@@ -42,8 +42,8 @@ public class FileMessage extends Message {
 	 *
 	 * @param fm The FileMessage to copy data from.
 	 */
-	public FileMessage(FileMessage fm) {
-		super(fm.sender, fm.text, fm.getRecipients());
+	public FileMessage(Client sender, FileMessage fm) {
+		super(sender, fm.text, fm.getRecipients());
 		this.file = fm.file;
 		this.name = fm.name;
 	}
@@ -55,8 +55,8 @@ public class FileMessage extends Message {
 	 * @param fm The FileMessage to copy data from.
 	 * @param recipients The recipients of the new FileMessage.
 	 */
-	public FileMessage(FileMessage fm, Client... recipients) {
-		super(fm.sender, fm.text, recipients);
+	public FileMessage(Client sender, FileMessage fm, Client... recipients) {
+		super(sender, fm.text, recipients);
 		this.file = fm.file;
 		this.name = fm.name;
 	}
@@ -101,10 +101,11 @@ public class FileMessage extends Message {
 		/**
 		 * Create a new request for the file specified by a FileMessage.
 		 *
+		 * @param sender The sender of the message.
 		 * @param fm The FileMessage that represents the shared file to request.
 		 */
-		public FileRequest(FileMessage fm) {
-			super(fm, fm.sender);
+		public FileRequest(Client sender, FileMessage fm) {
+			super(sender, fm);
 			start = 0;
 			end = 0;
 		}
@@ -112,12 +113,13 @@ public class FileMessage extends Message {
 		/**
 		 * Create a new request for part of a shared file.
 		 *
+		 * @param sender The sender of the message.
 		 * @param fm The FileMessage that represents the shared file to request.
 		 * @param start Skip this many bytes from the start of the file.
 		 * @param end The total number of bytes sent will be end - start.
 		 */
-		public FileRequest(FileMessage fm, long start, long end) {
-			super(fm, fm.sender);
+		public FileRequest(Client sender, FileMessage fm, long start, long end) {
+			super(sender, fm);
 			if(start <= 0) {
 				this.start = 0;
 			} else {

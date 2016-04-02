@@ -222,14 +222,14 @@ public class Backend implements Runnable {
 	 * @param f the File to save the downloaded file to.
 	 */
 	public void getFile(FileMessage fm, File f) {
-		if(isDownloading(fm)) {
-			return;
-		}
 		try {
-			System.out.println(fm.sender.id + fm.name);
+			if(isDownloading(fm)) {
+				return;
+			}
 			downloadingFiles.put(fm.sender.id + fm.name, new FileGetter(fm, f));
-			sendQueue.add(new FileMessage.FileRequest(fm));
-		} catch(IOException e) {
+			sendQueue.add(new FileMessage.FileRequest(self, fm));
+		} catch(IOException ex) {
+			Logger.getLogger(Backend.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
@@ -264,7 +264,6 @@ public class Backend implements Runnable {
 			if(m instanceof FilePacket) {
 				FilePacket fp = (FilePacket)m;
 				FileGetter get = downloadingFiles.get(fp.sender.id + fp.name);
-				System.out.println(fp.sender.id + fp.name);
 				if(get != null) {
 					get.receivePacket(fp);
 					if(get.isClosed()) {
@@ -432,8 +431,8 @@ public class Backend implements Runnable {
 			out.writeUTF("disconnect");
 			out.flush();
 			s.shutdownOutput();
-		} catch(IOException | ClassNotFoundException e) {
-			e.printStackTrace();
+		} catch(IOException | ClassNotFoundException ex) {
+			Logger.getLogger(Backend.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 }

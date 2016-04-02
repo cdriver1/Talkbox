@@ -6,6 +6,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import talkbox.lib.*;
 
 /**
@@ -65,7 +67,8 @@ public class FileGetter {
 			try {
 				writePacket(p);
 				return;
-			} catch(IOException e) {
+			} catch(IOException ex) {
+				Logger.getLogger(FileGetter.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}
 		synchronized(packets) {
