@@ -7,8 +7,8 @@ import java.util.Arrays;
  */
 public class FilePacket extends FileMessage implements DataPacket, Comparable<FilePacket> {
 	private static final long serialVersionUID = -6321865498170925123L;
-	public static final int preferredSize = 1024;
-	public static final int minimumSize = 512;
+	public static final int preferredSize = 1024 * 512;
+	public static final int minimumSize = 1024;
 	public final byte[] bytes;
 	public final int start;
 	public final int sequence;
