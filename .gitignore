@@ -5,3 +5,4 @@
 MANIFEST.MF
 .tags*
 build/
+/.nb-gradle/

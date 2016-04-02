@@ -1,15 +1,13 @@
 package talkbox.server;
 
-import talkbox.lib.*;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import talkbox.lib.*;
 
 public class Server implements Runnable {
 	public final int port;
@@ -29,6 +27,7 @@ public class Server implements Runnable {
 		started = new AtomicBoolean();
 		thread = new Thread(this);
 	}
+
 	public Server(int port, Thread thread) throws IOException {
 		server = new ServerSocket(port);
 		server.setSoTimeout(250);
@@ -40,8 +39,9 @@ public class Server implements Runnable {
 	}
 
 	public void start() {
-		if(started.getAndSet(true))
+		if(started.getAndSet(true)) {
 			return;
+		}
 		thread.start();
 	}
 
@@ -120,8 +120,9 @@ public class Server implements Runnable {
 	}
 
 	public synchronized void join() {
-		if(stopped)
+		if(stopped) {
 			return;
+		}
 		try {
 			wait();
 		} catch(InterruptedException e) {
@@ -154,6 +155,7 @@ public class Server implements Runnable {
 	private class ServerClient implements Runnable {
 		private final Client client;
 		private boolean connected = true;
+
 		private ServerClient(Client client) {
 			this.client = client;
 		}
@@ -174,7 +176,7 @@ public class Server implements Runnable {
 							try {
 								Message[] messages = (Message[])client.readObject();
 								client.setName(messages[messages.length - 1].sender.getName());
-								System.out.println(client.id +": " + client.getName() + " sent " + messages.length + " messages.");
+								System.out.println(client.id + ": " + client.getName() + " sent " + messages.length + " messages.");
 								sendMessages(messages);
 							} catch(ClassNotFoundException e) {
 							}

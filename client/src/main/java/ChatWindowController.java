@@ -1,34 +1,34 @@
 package talkbox.client;
 
-import talkbox.lib.*;
 import java.io.ByteArrayInputStream;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.ResourceBundle;
 import java.util.concurrent.ThreadLocalRandom;
 import javafx.application.Platform;
-import javafx.util.Callback;
-import javafx.util.StringConverter;
-import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.scene.control.Tooltip;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.ListView;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.Label;
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.*;
+import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
-import javafx.collections.*;
-import java.text.SimpleDateFormat;
+import javafx.util.Callback;
+import javafx.util.StringConverter;
+import talkbox.lib.*;
 
 public class ChatWindowController implements Initializable {
 	@FXML
@@ -41,10 +41,12 @@ public class ChatWindowController implements Initializable {
 	private ListView<Client> onlineList;
 	private String name;
 	private final StringConverter<Message> messageConverter = new StringConverter<Message>() {
+		@Override
 		public Message fromString(String string) {
 			return null;
 		}
 
+		@Override
 		public String toString(Message m) {
 			String msg = m.sender.getName();
 			if(m.text == null) {
@@ -71,8 +73,9 @@ public class ChatWindowController implements Initializable {
 	private void sendMessage(ActionEvent event) {
 		String m = messageField.getText();
 		messageField.setText("");
-		if(m.length() == 0)
+		if(m.length() == 0) {
 			return;
+		}
 		NetworkMethods.backend.sendMessage(m);
 	}
 
@@ -90,14 +93,11 @@ public class ChatWindowController implements Initializable {
 		nameField.setText(name);
 		NetworkMethods.backend.changeName(name, false);
 
-		messageList.setCellFactory(new Callback<ListView<Message>, ListCell<Message>>() {
-			@Override
-			public MessageCell call(ListView<Message> list) {
-				MessageCell mc = new MessageCell();
-				mc.setConverter(messageConverter);
-				mc.setWrapText(true);
-				return mc;
-			}
+		messageList.setCellFactory((ListView<Message> list) -> {
+			MessageCell mc = new MessageCell();
+			mc.setConverter(messageConverter);
+			mc.setWrapText(true);
+			return mc;
 		});
 
 		Platform.runLater(() -> {
@@ -105,7 +105,7 @@ public class ChatWindowController implements Initializable {
 		});
 	}
 
-	public void setOnlineNames(Client[] Names){
+	public void setOnlineNames(Client[] Names) {
 		Platform.runLater(() -> {
 			ObservableList<Client> names = FXCollections.observableArrayList(Arrays.asList(Names));
 			onlineList.setItems(names);
@@ -133,6 +133,7 @@ public class ChatWindowController implements Initializable {
 
 class MessageCell extends TextFieldListCell<Message> {
 	public static final Base64.Decoder b64decoder = Base64.getDecoder();
+
 	@Override
 	public void updateItem(Message item, boolean empty) {
 		super.updateItem(null, true);
@@ -178,10 +179,14 @@ class FileLinkListener implements EventHandler<ActionEvent> {
 
 	@Override
 	public void handle(ActionEvent e) {
+		if(!NetworkMethods.backend.hasClient(fm.sender)) {
+			//TODO: add indication that this failed because the file is no longer available.
+			return;
+		}
 		FileChooser fc = new FileChooser();
 		fc.setTitle("Save file to...");
 		fc.setInitialFileName(fm.name);
 		java.io.File f = fc.showSaveDialog(((Hyperlink)e.getSource()).getScene().getWindow());
-		//TODO: tell backend to request the file and save it.
+		NetworkMethods.backend.getFile(fm, f);
 	}
 }

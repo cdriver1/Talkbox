@@ -1,35 +1,31 @@
 package talkbox.client;
 
-import talkbox.lib.*;
 import java.io.BufferedInputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
+import java.util.Arrays;
+import java.util.List;
+import talkbox.lib.*;
 
 public class FileSender implements Runnable {
-	private static final ExecutorService threadPool = Executors.newCachedThreadPool();
 	private final Backend backend;
 	private final FileMessage fm;
 	private final BufferedInputStream in;
+	private final List<Client> recipients;
 	public final long from, to;
 
-	public FileSender(Backend backend, FileMessage fm) throws IOException {
+	protected FileSender(Backend backend, FileMessage fm, Client... recipients) throws IOException {
 		this.backend = backend;
 		this.fm = fm;
 		in = new BufferedInputStream(new FileInputStream(fm.file));
 		from = 0;
 		to = fm.file.length();
+		this.recipients = Arrays.asList(recipients);
 	}
 
-	public void start() {
-	}
-
-	public static FileSender FileSender(Backend backend, FileMessage fm) throws IOException {
-		FileSender fs = new FileSender(backend, fm);
-		fs.start();
+	public static FileSender FileSender(Backend backend, FileMessage fm, Client... recipients) throws IOException {
+		FileSender fs = new FileSender(backend, fm, recipients);
+		Main.submit(fs);
 		return fs;
 	}
 
@@ -51,15 +47,20 @@ public class FileSender implements Runnable {
 					if(size > FilePacket.preferredSize) {
 						byte[] bytes = new byte[FilePacket.preferredSize];
 						int r = 0;
-						while(r < FilePacket.preferredSize) {
+						while(r < FilePacket.minimumSize) {
 							r += in.read(bytes, r, FilePacket.preferredSize - r);
+						}
+						if(r != FilePacket.preferredSize) {
+							byte[] bb = new byte[r];
+							System.arraycopy(bytes, 0, bb, 0, r);
+							bytes = bb;
 						}
 						if(last == null) {
 							last = new FilePacket(fm, bytes, size);
 						} else {
 							last = last.nextPacket(bytes);
 						}
-						size -= FilePacket.preferredSize;
+						size -= r;
 					} else {
 						int s = (int)size;
 						byte[] bytes = new byte[s];
@@ -73,7 +74,7 @@ public class FileSender implements Runnable {
 					backend.sendMessage(last);
 				}
 			}
-		} catch(IOException e) {
+		} catch(Exception e) {
 			e.printStackTrace();
 		}
 	}
