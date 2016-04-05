@@ -14,9 +14,9 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
@@ -26,7 +26,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
-import javafx.util.Callback;
 import javafx.util.StringConverter;
 import talkbox.lib.*;
 
@@ -39,6 +38,9 @@ public class ChatWindowController implements Initializable {
 	private TextField messageField;
 	@FXML
 	private ListView<Client> onlineList;
+	@FXML
+	private Button microphoneButton;
+	
 	private String name;
 	private final StringConverter<Message> messageConverter = new StringConverter<Message>() {
 		@Override
@@ -78,6 +80,11 @@ public class ChatWindowController implements Initializable {
 		}
 		NetworkMethods.backend.sendMessage(m);
 	}
+	
+	@FXML
+	private void microphoneAction(ActionEvent event) {
+		//TODO: toggle the microphone
+	}
 
 	public void receiveMessage(Message m) {
 		Platform.runLater(() -> {
@@ -103,6 +110,10 @@ public class ChatWindowController implements Initializable {
 		Platform.runLater(() -> {
 			messageField.requestFocus();
 		});
+		
+		Image microphone = new Image(getClass().getResourceAsStream("Microphone.png"));
+		ImageView mp = new ImageView(microphone);
+		microphoneButton.setGraphic(mp);
 	}
 
 	public void setOnlineNames(Client[] Names) {
