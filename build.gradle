@@ -4,22 +4,24 @@ subprojects {
 
 project(":lib") {
 	archivesBaseName = 'TalkBoxLibrary'
-	version = '0.1'
+	version = '0.2'
 }
 
 project(":client") {
 	archivesBaseName = 'TalkBoxClient'
-	version = '0.1'
+	version = '0.2'
 	dependencies {
 		compile project(":lib")
 	}
+	def mainClass = "talkbox.client.Main"
+	ext.mainClass = mainClass
 	jar {
 		manifest {
 			attributes("Implementation-Title": "TalkBox",
 			"Implementation-Version": version,
 			"Permissions": "sandbox",
 			"JavaFX-Version": "8.0",
-			"Main-Class": "talkbox.client.Main")
+			"Main-Class": mainClass)
 		}
 		from project(":lib").sourceSets.main.output.classesDir
 		from project(":lib").sourceSets.main.output.resourcesDir
@@ -28,13 +30,15 @@ project(":client") {
 
 project(":server") {
 	archivesBaseName = 'TalkBoxServer'
-	version = '0.1'
+	version = '0.2'
 	dependencies {
 		compile project(":lib")
 	}
+	def mainClass = "talkbox.server.Main"
+	ext.mainClass = mainClass
 	jar {
 		manifest {
-			attributes("Main-Class": "talkbox.server.Main")
+			attributes("Main-Class": mainClass)
 		}
 		from project(":lib").sourceSets.main.output.classesDir
 		from project(":lib").sourceSets.main.output.resourcesDir
