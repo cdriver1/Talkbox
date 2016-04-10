@@ -41,6 +41,8 @@ public class ChatWindowController implements Initializable {
 	@FXML
 	private Button microphoneButton;
 	
+	private CaptureAudio capt = new CaptureAudio();
+	static final long RECORD_TIME = 30000;  // 30 seconds
 	private String name;
 	private final StringConverter<Message> messageConverter = new StringConverter<Message>() {
 		@Override
@@ -83,7 +85,24 @@ public class ChatWindowController implements Initializable {
 	
 	@FXML
 	private void microphoneAction(ActionEvent event) {
-		//TODO: toggle the microphone
+		System.out.println("Mic button pressed.");
+		/// creates a new thread that waits for a specified
+        // of time before stopping
+        Thread stopper = new Thread(new Runnable() {
+            public void run() {
+                try {
+                    Thread.sleep(RECORD_TIME); // Time is currently 30 seconds.
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+                capt.stop();
+            }
+        });
+ 
+        stopper.start();
+ 
+        // start recording
+        capt.start();
 	}
 
 	public void receiveMessage(Message m) {
