@@ -1,12 +1,19 @@
 package talkbox.client;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -24,6 +31,8 @@ import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
@@ -86,23 +95,25 @@ public class ChatWindowController implements Initializable {
 	@FXML
 	private void microphoneAction(ActionEvent event) {
 		System.out.println("Mic button pressed.");
-		/// creates a new thread that waits for a specified
-        // of time before stopping
-        Thread stopper = new Thread(new Runnable() {
-            public void run() {
-                try {
-                    Thread.sleep(RECORD_TIME); // Time is currently 30 seconds.
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-                capt.stop();
-            }
-        });
- 
-        stopper.start();
- 
-        // start recording
-        capt.start();
+		if(microphoneButton.getText().startsWith("Record")){
+			capt.start();
+			microphoneButton.setText("Stop");
+		}else{
+			System.out.println("in microphoneAction before b = capt.getAudioBytes ");
+			capt.stop();
+			byte[] b;
+                    try {
+                            CompletableFuture<byte[]> audioBytes = capt.getAudioBytes();
+                        b = audioBytes.get();
+			System.out.println("in microphoneAction after b = capt.getAudioBytes " + b.length);
+			NetworkMethods.backend.sendAudio(b, capt.getFormat());
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(ChatWindowController.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ExecutionException ex) {
+                        Logger.getLogger(ChatWindowController.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+			microphoneButton.setText("Record");
+		}
 	}
 
 	public void receiveMessage(Message m) {
@@ -118,7 +129,7 @@ public class ChatWindowController implements Initializable {
 		name = "guest-" + ThreadLocalRandom.current().nextInt(1000, 10000);
 		nameField.setText(name);
 		NetworkMethods.backend.changeName(name, false);
-
+		
 		messageList.setCellFactory((ListView<Message> list) -> {
 			MessageCell mc = new MessageCell();
 			mc.setConverter(messageConverter);
@@ -132,7 +143,7 @@ public class ChatWindowController implements Initializable {
 		
 		Image microphone = new Image(getClass().getResourceAsStream("Microphone.png"));
 		ImageView mp = new ImageView(microphone);
-		microphoneButton.setGraphic(mp);
+		microphoneButton.setText("Record");
 	}
 
 	public void setOnlineNames(Client[] Names) {
@@ -190,7 +201,31 @@ class MessageCell extends TextFieldListCell<Message> {
 				hl.setOnAction(new FileLinkListener((FileMessage)item));
 				TextFlow tf = new TextFlow(new Label(msg), hl);
 				setGraphic(tf);
-			} else {
+			}else if(item instanceof AudioMessage){
+                            //dostuff
+                            File f = new File("" + System.nanoTime() + ".wav");
+                            if(!f.exists()){
+                                try {
+                                    new FileOutputStream(f).write(((AudioMessage) item).getAudioBytes());
+                                    
+                            } catch (Exception ex) {
+                                Logger.getLogger(MessageCell.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                            }
+                            Media media = new Media(f.toURI().toString());
+                            MediaPlayer mp = new MediaPlayer(media);
+                            Hyperlink hyperlink = new Hyperlink("AudioMessage");
+                            hyperlink.setOnAction(new EventHandler<ActionEvent>() {
+                                @Override
+                                public void handle(ActionEvent event) {
+                                    if(mp.getStatus() == MediaPlayer.Status.PLAYING)
+                                        mp.stop();
+                                    else
+                                        mp.play();
+                                        }
+                            });
+                            setGraphic(hyperlink);
+                        }else {
 				Label l = new Label(msg);
 				l.setWrapText(true);
 				l.maxWidthProperty().bind(getListView().widthProperty().subtract(20));
