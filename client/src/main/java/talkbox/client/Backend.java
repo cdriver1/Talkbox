@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.ByteArrayInputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.sound.sampled.*;
 import talkbox.lib.*;
 
 /**
@@ -22,7 +24,8 @@ import talkbox.lib.*;
  */
 public class Backend implements Runnable {
 	public static final String hostname = "localhost";
-	public static final int port = 5476;
+	public static final int port = 5750;
+	private static AudioFormat format; // Added because AudioFormat is not serializable.
 
 	/**
 	 * Create a new Backend, start it, then return it.
@@ -160,6 +163,17 @@ public class Backend implements Runnable {
 	}
 
 	/**
+	* Queue a single AudioMessage
+	*
+	* @param b The byte array of audio to send
+	* @throws IOException
+	*/
+	public void sendAudio(byte[] b, AudioFormat f){
+		sendQueue.add(new AudioMessage(self, b));
+		format = f;
+	}
+
+	/**
 	 * Queue a single ImageMessage.
 	 *
 	 * @param f The File of the image to send.
@@ -179,7 +193,7 @@ public class Backend implements Runnable {
 	public void sendImage(String s, File f) throws IOException {
 		sendQueue.add(new ImageMessage(self, s, f));
 	}
-
+		
 	/**
 	 * Queue a single ImageMessage with text and specified recipients.
 	 *
@@ -281,6 +295,10 @@ public class Backend implements Runnable {
 					Logger.getLogger(Backend.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			}
+		} else if(m instanceof AudioMessage){
+			AudioMessage am = (AudioMessage)m;
+			System.out.println(m.text + " " + am.getAudioBytes().length);
+			startPlayback(am.getAudioBytes());
 		}
 		if(m.display()) {
 			controller.receiveMessage(m);
@@ -288,6 +306,34 @@ public class Backend implements Runnable {
 		//resume();
 	}
 
+	public void startPlayback(byte[] audioBytes){
+		ByteArrayInputStream bais = new ByteArrayInputStream(audioBytes);
+		AudioInputStream audioInputStream = new AudioInputStream(bais, format, audioBytes.length / format.getFrameSize());
+		Playback playb = new Playback(audioInputStream);
+
+		long milliseconds = (long) ((audioInputStream.getFrameLength() * 1000) / format.getFrameRate());
+		long duration = milliseconds / (long)1000.0;
+		Thread stopper = new Thread(new Runnable() {
+            public void run() {
+                try {
+                    Thread.sleep(duration); // Time is currently 30 seconds.
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+                playb.stop();
+            }
+		});
+		stopper.start();
+		playb.start();
+			
+		try {
+			audioInputStream.reset();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return;
+		}
+	}
+	
 	/**
 	 * An array of received messages should be passed to this method. They will
 	 * be processed and displayed.
