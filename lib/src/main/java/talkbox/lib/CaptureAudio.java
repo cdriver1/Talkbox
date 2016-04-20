@@ -126,5 +126,6 @@ public class CaptureAudio implements Runnable {
         line.stop();
         line.close();
         line = null;
+		cfBytes = null;
     }
 } // End class Capture

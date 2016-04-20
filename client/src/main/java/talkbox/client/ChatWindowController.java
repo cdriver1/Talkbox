@@ -33,6 +33,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
@@ -49,7 +50,7 @@ public class ChatWindowController implements Initializable {
 	private ListView<Client> onlineList;
 	@FXML
 	private Button microphoneButton;
-	
+
 	private CaptureAudio capt = new CaptureAudio();
 	static final long RECORD_TIME = 30000;  // 30 seconds
 	private String name;
@@ -91,27 +92,27 @@ public class ChatWindowController implements Initializable {
 		}
 		NetworkMethods.backend.sendMessage(m);
 	}
-	
+
 	@FXML
 	private void microphoneAction(ActionEvent event) {
 		System.out.println("Mic button pressed.");
-		if(microphoneButton.getText().startsWith("Record")){
+		if(microphoneButton.getText().startsWith("Record")) {
 			capt.start();
 			microphoneButton.setText("Stop");
-		}else{
+		} else {
 			System.out.println("in microphoneAction before b = capt.getAudioBytes ");
+			CompletableFuture<byte[]> audioBytes = capt.getAudioBytes();
 			capt.stop();
 			byte[] b;
-                    try {
-                            CompletableFuture<byte[]> audioBytes = capt.getAudioBytes();
-                        b = audioBytes.get();
-			System.out.println("in microphoneAction after b = capt.getAudioBytes " + b.length);
-			NetworkMethods.backend.sendAudio(b, capt.getFormat());
-                    } catch (InterruptedException ex) {
-                        Logger.getLogger(ChatWindowController.class.getName()).log(Level.SEVERE, null, ex);
-                    } catch (ExecutionException ex) {
-                        Logger.getLogger(ChatWindowController.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+			try {
+				b = audioBytes.get();
+				System.out.println("in microphoneAction after b = capt.getAudioBytes " + b.length);
+				NetworkMethods.backend.sendAudio(b, capt.getFormat());
+			} catch(InterruptedException ex) {
+				Logger.getLogger(ChatWindowController.class.getName()).log(Level.SEVERE, null, ex);
+			} catch(ExecutionException ex) {
+				Logger.getLogger(ChatWindowController.class.getName()).log(Level.SEVERE, null, ex);
+			}
 			microphoneButton.setText("Record");
 		}
 	}
@@ -129,7 +130,7 @@ public class ChatWindowController implements Initializable {
 		name = "guest-" + ThreadLocalRandom.current().nextInt(1000, 10000);
 		nameField.setText(name);
 		NetworkMethods.backend.changeName(name, false);
-		
+
 		messageList.setCellFactory((ListView<Message> list) -> {
 			MessageCell mc = new MessageCell();
 			mc.setConverter(messageConverter);
@@ -140,7 +141,7 @@ public class ChatWindowController implements Initializable {
 		Platform.runLater(() -> {
 			messageField.requestFocus();
 		});
-		
+
 		Image microphone = new Image(getClass().getResourceAsStream("Microphone.png"));
 		ImageView mp = new ImageView(microphone);
 		microphoneButton.setText("Record");
@@ -201,31 +202,35 @@ class MessageCell extends TextFieldListCell<Message> {
 				hl.setOnAction(new FileLinkListener((FileMessage)item));
 				TextFlow tf = new TextFlow(new Label(msg), hl);
 				setGraphic(tf);
-			}else if(item instanceof AudioMessage){
-                            //dostuff
-                            File f = new File("" + System.nanoTime() + ".wav");
-                            if(!f.exists()){
-                                try {
-                                    new FileOutputStream(f).write(((AudioMessage) item).getAudioBytes());
-                                    
-                            } catch (Exception ex) {
-                                Logger.getLogger(MessageCell.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            }
-                            Media media = new Media(f.toURI().toString());
-                            MediaPlayer mp = new MediaPlayer(media);
-                            Hyperlink hyperlink = new Hyperlink("AudioMessage");
-                            hyperlink.setOnAction(new EventHandler<ActionEvent>() {
-                                @Override
-                                public void handle(ActionEvent event) {
-                                    if(mp.getStatus() == MediaPlayer.Status.PLAYING)
-                                        mp.stop();
-                                    else
-                                        mp.play();
-                                        }
-                            });
-                            setGraphic(hyperlink);
-                        }else {
+			} else if(item instanceof AudioMessage) {
+				//dostuff
+				File f = new File("" + System.nanoTime() + ".wav");
+				if(!f.exists()) {
+					f.deleteOnExit();
+					try {
+						new FileOutputStream(f).write(((AudioMessage)item).getAudioBytes());
+					} catch(Exception ex) {
+						Logger.getLogger(MessageCell.class.getName()).log(Level.SEVERE, null, ex);
+					}
+				}
+				Media media = new Media(f.toURI().toString());
+				MediaPlayer mp = new MediaPlayer(media);
+//				MediaView mv = new MediaView(mp);
+//				setGraphic(mv);
+				Hyperlink hyperlink = new Hyperlink("AudioMessage");
+				hyperlink.setOnAction(new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent event) {
+						if(mp.getStatus() == MediaPlayer.Status.PLAYING) {
+							mp.stop();
+						} else {
+							mp.play();
+						}
+					}
+				});
+				TextFlow tf = new TextFlow(new Label(msg), hyperlink);
+				setGraphic(tf);
+			} else {
 				Label l = new Label(msg);
 				l.setWrapText(true);
 				l.maxWidthProperty().bind(getListView().widthProperty().subtract(20));

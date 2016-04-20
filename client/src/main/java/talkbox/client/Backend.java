@@ -24,7 +24,7 @@ import talkbox.lib.*;
  */
 public class Backend implements Runnable {
 	public static final String hostname = "localhost";
-	public static final int port = 5750;
+	public static final int port = 5476;
 	private static AudioFormat format; // Added because AudioFormat is not serializable.
 
 	/**
@@ -295,10 +295,6 @@ public class Backend implements Runnable {
 					Logger.getLogger(Backend.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			}
-		} else if(m instanceof AudioMessage){
-			AudioMessage am = (AudioMessage)m;
-			System.out.println(m.text + " " + am.getAudioBytes().length);
-			startPlayback(am.getAudioBytes());
 		}
 		if(m.display()) {
 			controller.receiveMessage(m);
@@ -306,34 +302,6 @@ public class Backend implements Runnable {
 		//resume();
 	}
 
-	public void startPlayback(byte[] audioBytes){
-		ByteArrayInputStream bais = new ByteArrayInputStream(audioBytes);
-		AudioInputStream audioInputStream = new AudioInputStream(bais, format, audioBytes.length / format.getFrameSize());
-		Playback playb = new Playback(audioInputStream);
-
-		long milliseconds = (long) ((audioInputStream.getFrameLength() * 1000) / format.getFrameRate());
-		long duration = milliseconds / (long)1000.0;
-		Thread stopper = new Thread(new Runnable() {
-            public void run() {
-                try {
-                    Thread.sleep(duration); // Time is currently 30 seconds.
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-                playb.stop();
-            }
-		});
-		stopper.start();
-		playb.start();
-			
-		try {
-			audioInputStream.reset();
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			return;
-		}
-	}
-	
 	/**
 	 * An array of received messages should be passed to this method. They will
 	 * be processed and displayed.
