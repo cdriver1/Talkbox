@@ -30,6 +30,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
@@ -215,9 +216,10 @@ class MessageCell extends TextFieldListCell<Message> {
 				}
 				Media media = new Media(f.toURI().toString());
 				MediaPlayer mp = new MediaPlayer(media);
+				setGraphic(MediaControlsController.MediaControls(mp, msg));
 //				MediaView mv = new MediaView(mp);
 //				setGraphic(mv);
-				Hyperlink hyperlink = new Hyperlink("AudioMessage");
+				/*Hyperlink hyperlink = new Hyperlink("AudioMessage");
 				hyperlink.setOnAction(new EventHandler<ActionEvent>() {
 					@Override
 					public void handle(ActionEvent event) {
@@ -229,7 +231,7 @@ class MessageCell extends TextFieldListCell<Message> {
 					}
 				});
 				TextFlow tf = new TextFlow(new Label(msg), hyperlink);
-				setGraphic(tf);
+				setGraphic(tf);*/
 			} else {
 				Label l = new Label(msg);
 				l.setWrapText(true);

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox alignment="CENTER_LEFT" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefWidth="600.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="talkbox.client.MediaControlsController">
+	<children>
+		<Label fx:id="label" text="&lt;name&gt; &lt;timestamp&gt;:" />
+		<Button fx:id="playButton" mnemonicParsing="false" onAction="#onPlay" text="Play" />
+		<Button mnemonicParsing="false" onAction="#onStop" text="Stop" />
+		<Slider fx:id="seekbar" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" />
+	</children>
+	<padding>
+		<Insets bottom="14.0" left="14.0" right="14.0" top="14.0" />
+	</padding>
+</HBox>
