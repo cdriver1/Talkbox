@@ -23,7 +23,7 @@ import talkbox.lib.*;
  * create a new backend with the static method Backend.Backend().
  */
 public class Backend implements Runnable {
-	public static final String hostname = "localhost";
+	public static final String hostname = "java.cjdeakin.me";
 	public static final int port = 5476;
 	private static AudioFormat format; // Added because AudioFormat is not serializable.
 
